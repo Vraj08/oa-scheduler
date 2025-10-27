@@ -647,15 +647,25 @@ def handle_add(
     sheet_title, campus_kind = _resolve_campus_title(ss, campus_title, sidebar_tab)
     dbg(f"📌 Sheet resolved: '{sheet_title}'  kind={campus_kind}")
 
-    # Normalize times
+    # Times + caps
     start_dt = _ensure_dt(start)
     end_dt   = _ensure_dt(end, ref_date=start_dt.date())
+
+    # Allow overnight windows like "7pm-12am" or "10pm-2am" by rolling end into next day
     if not (_is_half_hour_boundary_dt(start_dt) and _is_half_hour_boundary_dt(end_dt)):
         fail("Times must be on 30-minute boundaries (:00 or :30).")
+
     if end_dt <= start_dt:
-        fail("End time must be after start time.")
+        # If the end looks like after-midnight (00:00–05:59), treat it as same-night continuation
+        if 0 <= end_dt.time().hour <= 5:
+            end_dt = end_dt.replace(day=end_dt.day) + timedelta(days=1)
+            dbg("⏩ Interpreting an after-midnight end time (e.g., 12:00 AM) as same-night; rolled end to next day.")
+        else:
+            fail("End time must be after start time.")
+
     req_slots = _range_to_slots(start_dt, end_dt)
     req_minutes = 30 * len(req_slots)
+
     dbg(f"🕒 Request window {fmt_time(start_dt)}–{fmt_time(end_dt)}  ({req_minutes/60:.1f}h)")
 
     # Canonical day
@@ -860,7 +870,7 @@ def handle_add(
     # Success
     fresh_total = total_hours_from_unh_mc_and_neighbor(ss, schedule, canon_target_name)
     return (
-        f"✅ Booked **{canon_target_name}** on **{target_title}** "
+        f" Added **{canon_target_name}** on **{target_title}** "
         f"({day_canon.title()} {fmt_time(start_dt)}–{fmt_time(end_dt)}). "
         f"Now at **{fresh_total:.1f}h / 20h** this week."
     )
