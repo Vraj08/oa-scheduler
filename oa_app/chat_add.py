@@ -142,6 +142,16 @@ def _canon_input_day(user_day: Optional[str]) -> Optional[str]:
                 return full
     return None
 
+def _canon_day_from_header(value: str) -> Optional[str]:
+    s = (value or "").strip().lower()
+    s = "".join(ch for ch in s if ch.isalpha() or ch.isspace() or ch == ",")
+    head = s.split(",")[0].strip()
+    mapping = {
+        "monday":"monday","tuesday":"tuesday","wednesday":"wednesday",
+        "thursday":"thursday","friday":"friday","saturday":"saturday","sunday":"sunday",
+    }
+    return mapping.get(head)
+
 def _canon_day_loose(cell: str) -> Optional[str]:
     if not cell:
         return None
@@ -166,13 +176,14 @@ def _weekday_from_dateish(cell: str) -> Optional[str]:
     s = s.replace("\xa0", " ")
     candidates = [s]
     if re.search(r"\d{2}:\d{2}:\d{2}$", s):
-        candidates.append(re.sub(r"\s*\d{2}:\d{2}:\d{2}$", "", s).strip())
+        from re import sub
+        candidates.append(sub(r"\s*\d{2}:\d{2}:\d{2}$", "", s).strip())
     for t in candidates:
         try:
             from dateutil import parser as dateparser
             dt = dateparser.parse(t, fuzzy=True, default=datetime(2000,1,1))
             if dt:
-                return dt.strftime("%A").lower()  # robust (no Monday=0 confusion)
+                return dt.strftime("%A").lower()
         except Exception:
             pass
     return None
@@ -186,31 +197,22 @@ def _first_k_nonempty_rows(grid: List[List[str]], k: int = 3) -> List[Tuple[int,
             break
     return out
 
-# ───────────────────────── PATCH: always scan top header row (row 0) ─────────────────────────
+# ───────────────────────── Always scan top row ─────────────────────────
 def _day_cols_from_first_row(grid: List[List[str]], dbg: Optional[Callable[[str], None]] = None) -> Dict[str, int]:
-    """
-    Detect weekday columns from the very top header row (row 0).
-    This matches your On-Call sheets where weekdays like 'Sunday, 9/7/25' live in row 0.
-    Skips numeric/time-like cells; supports date → weekday derivation.
-    """
     cols: Dict[str, int] = {}
     if not grid:
         return cols
-
     row0 = grid[0]
     for c, raw in enumerate(row0):
         cell = (raw or "").replace("\xa0", " ").strip()
         if not cell:
             continue
         low = cell.lower()
-        # skip pure numbers and obvious time-like cells
         if re.fullmatch(r"\d+(\.\d+)?", low) or re.search(r"\b(am|pm)\b", low):
             continue
-
         d = _canon_day_loose(cell) or _weekday_from_dateish(cell)
         if d and d not in cols:
             cols[d] = c
-
     if dbg:
         dbg(f"🧩 [row0 header] _day_cols_from_first_row → {cols} | head={row0[:10]}")
     return cols
@@ -637,14 +639,15 @@ def handle_add(
         debug_log.append(str(msg))
 
     def fail(msg: str):
-        log = "\n".join(debug_log[-400:])
+        log = "\n".join(debug_log[-800:])  # include lots of context in the chat error
         raise ValueError(f"{msg}\n\n--- DEBUG ---------------------------------\n{log if log else '(no debug)'}\n-------------------------------------------")
 
-    # Resolve campus
+    # Resolve campus/tab
     sidebar_tab = st.session_state.get("active_sheet")
     sheet_title, campus_kind = _resolve_campus_title(ss, campus_title, sidebar_tab)
+    dbg(f"📌 Sheet resolved: '{sheet_title}'  kind={campus_kind}")
 
-    # Times + caps
+    # Normalize times
     start_dt = _ensure_dt(start)
     end_dt   = _ensure_dt(end, ref_date=start_dt.date())
     if not (_is_half_hour_boundary_dt(start_dt) and _is_half_hour_boundary_dt(end_dt)):
@@ -653,28 +656,47 @@ def handle_add(
         fail("End time must be after start time.")
     req_slots = _range_to_slots(start_dt, end_dt)
     req_minutes = 30 * len(req_slots)
+    dbg(f"🕒 Request window {fmt_time(start_dt)}–{fmt_time(end_dt)}  ({req_minutes/60:.1f}h)")
 
-    dbg(f"📌 Sheet: {sheet_title}  kind={campus_kind}")
+    # Canonical day
     day_canon = _canon_input_day(day)
     if not day_canon:
         fail(f"Couldn't understand the day '{day}'.")
-    dbg(f"🧭 Day raw={repr(day)} canon={day_canon}")
+    dbg(f"🧭 Day raw={repr(day)} canon={day_canon!r}")
 
-    # If ONCALL but request is small, redirect to UNH heuristic
+    # 20h weekly cap (pre)
+    week_hours_now = total_hours_from_unh_mc_and_neighbor(ss, schedule, canon_target_name)
+    dbg(f"📈 Weekly hours before: {week_hours_now:.1f}h")
+    if week_hours_now + (req_minutes / 60.0) > 20.0:
+        fail(f"More than 20 hours: have {week_hours_now:.1f}h; request {req_minutes/60:.1f}h.")
+
+    # ---- IMPORTANT: Only call schedule._get_sheet for UNH/MC. For ON-CALL we must not. ----
+    ws0: gspread.Worksheet
+    if campus_kind == "ONCALL":
+        # Directly open the tab by title; do NOT build SheetInfo here (it expects weekday headers).
+        try:
+            ws0 = ss.worksheet(sheet_title)
+        except Exception as e:
+            fail(f"Could not open worksheet '{sheet_title}': {e}")
+    else:
+        # UNH/MC path (uses ladder + day headers)
+        info = schedule._get_sheet(sheet_title)  # safe for UNH/MC
+        ws0 = getattr(info, 'ws', info)
+
+    # If ONCALL but request is small, optionally re-route to UNH (kept from your original behavior)
     if campus_kind == "ONCALL" and (end_dt - start_dt) < timedelta(hours=3):
         titles = _cached_ws_titles(getattr(ss, "id", "")) or []
         for t in titles:
             tl = t.lower()
             if ("unh" in tl) or ("hall" in tl):
                 sheet_title, campus_kind = t, "UNH"
+                # refresh ws0 correctly for UNH
+                info = schedule._get_sheet(sheet_title)
+                ws0 = getattr(info, 'ws', info)
                 dbg(f"🔁 Auto-route to {sheet_title} (UNH) for sub-3h request.")
                 break
 
-    week_hours_now = total_hours_from_unh_mc_and_neighbor(ss, schedule, canon_target_name)
-    dbg(f"📈 Weekly hours before: {week_hours_now:.1f}h")
-    if week_hours_now + (req_minutes / 60.0) > 20.0:
-        fail(f"More than 20 hours: have {week_hours_now:.1f}h; request {req_minutes/60:.1f}h.")
-
+    # Per-day minutes cap (8h)
     sched = get_user_schedule(ss, schedule, canon_target_name) or {}
     minutes_today = 0
     for _, ranges in (sched.get(day_canon, {}) or {}).items():
@@ -685,14 +707,12 @@ def handle_add(
                 ed += timedelta(days=1)
             minutes_today += int((ed - sd).total_seconds() // 60)
     dbg(f"🧮 Minutes on {day_canon.title()} before: {minutes_today} min")
-
     if (minutes_today + req_minutes) > 8 * 60:
         fail(f"Daily cap exceeded on {day_canon.title()}: have {_fmt_hm(minutes_today)}, request {_fmt_hm(req_minutes)}.")
 
-    info = schedule._get_sheet(sheet_title)
-    ws0: gspread.Worksheet = getattr(info, 'ws', info)
-
+    # ───────────────────────── On-Call ─────────────────────────
     if campus_kind == "ONCALL":
+        # Find a working On-Call sheet (same week) and deeply debug header mapping
         ws = _find_working_oncall_ws(ss, ws0.title, day_canon, start_dt, end_dt, dbg=dbg)
         if not ws:
             fail("Could not find an On-Call tab that contains this weekday/time block (or no empty lanes).")
@@ -701,67 +721,89 @@ def handle_add(
         if not ok:
             fail(f"Using '{ws.title}': {' | '.join(reasons)}")
 
+        # Lock
         locks_ws = get_or_create_locks_sheet(ss)
         k = lock_key(ws.title, day_canon, fmt_time(start_dt), fmt_time(end_dt))
         won, _ = acquire_fcfs_lock(locks_ws, k, actor_name, ttl_sec=90)
         if not won:
             fail("Another request just claimed this window. Try again.")
 
+        # Resolve the column for this weekday (with rich debug)
         grid = _read_grid(ws)
+        dbg(f"🧩 Top row (first 12 cols): { (grid[0][:12] if grid and grid[0] else []) }")
         day_cols = _day_cols_from_first_row(grid, dbg=dbg)
         if day_canon not in day_cols:
             hdr = _header_day_cols(grid, dbg=dbg)
             for k2, v2 in hdr.items():
                 day_cols.setdefault(k2, v2)
+            dbg(f"🧰 merged _header_day_cols → {day_cols}")
+
         if day_canon not in day_cols:
             inferred = _infer_day_cols_by_blocks(grid, dbg=dbg)
             for k2, v2 in inferred.items():
                 day_cols.setdefault(k2, v2)
+            dbg(f"🧰 merged _infer_day_cols_by_blocks → {day_cols}")
+
         if day_canon not in day_cols:
             c_guess = _find_day_col_anywhere(grid, day_canon)
             if c_guess is not None:
                 day_cols[day_canon] = c_guess
+                dbg(f"🧰 _find_day_col_anywhere → {day_cols}")
         if day_canon not in day_cols:
             c_guess2 = _find_day_col_fuzzy(grid, day_canon, dbg=dbg)
             if c_guess2 is not None:
                 day_cols[day_canon] = c_guess2
+                dbg(f"🧰 _find_day_col_fuzzy → {day_cols}")
+
         if day_canon not in day_cols:
-            fail(f"Could not read weekday header from '{ws.title}'.")
+            # Dump a small grid preview into the error so we can see what's actually in that header row
+            _debug_dump_header_scan(grid, dbg)
+            _debug_dump_grid_head(ws.title, grid, dbg, rows=12, cols=14)
+            fail(f"Could not read weekday header from '{ws.title}' for day '{day_canon.title()}'. Map={day_cols}")
 
         c0 = day_cols[day_canon]
-        c1 = c0 + 1
+        c1 = c0   # in your sheet, names live under the SAME column as the time-range label
+        dbg(f"✅ Day '{day_canon.title()}' resolved to column {c0} (0-based)")
+
+        # Find the exact On-Call block (e.g., "7:00 AM – 11:00 AM") and write into first empty lane
         want_s = start_dt.strftime("%I:%M %p"); want_e = end_dt.strftime("%I:%M %p")
         bounds = _find_oncall_block_row_bounds(grid, c0, want_s, want_e)
         if not bounds:
             _debug_dump_oncall_blocks_for_col(grid, c0, dbg)
-            fail("On-Call block vanished; please retry.")
+            fail(f"On-Call supports fixed blocks; '{want_s} – {want_e}' not found in col {c0}.")
         r_label, r_next = bounds
         lane_rows = list(range(r_label + 1, r_next))
         if not lane_rows:
             fail("On-Call block has no lane rows defined.")
+
         wrote = False
         for rr in lane_rows:
             v = grid[rr][c0] if (rr < len(grid) and c0 < len(grid[rr])) else ""
             if _is_blankish(v):
-                ws.update_cell(rr + 1, c1, f"OA: {canon_target_name}")
+                ws.update_cell(rr + 1, c1 + 1, f"OA: {canon_target_name}")  # gspread is 1-based
                 wrote = True
+                dbg(f"📝 Wrote at r{rr+1}, c{c1+1} → 'OA: {canon_target_name}'")
                 break
         if not wrote:
             fail("On-Call block filled before write; please retry.")
+
         target_title = ws.title
 
+    # ───────────────────────── UNH / MC ─────────────────────────
     else:
         per_slot_cap = 2 if campus_kind == "UNH" else None
         ok, reasons, _ = _check_unh_mc_capacity_via_grid(ws0, day_canon, start_dt, end_dt, per_slot_cap=per_slot_cap, debug=True, dbg=dbg)
         if not ok:
             fail(f"Using '{ws0.title}': {' | '.join(reasons)}")
 
+        # Lock
         locks_ws = get_or_create_locks_sheet(ss)
         k = lock_key(ws0.title, day_canon, fmt_time(start_dt), fmt_time(end_dt))
         won, _ = acquire_fcfs_lock(locks_ws, k, actor_name, ttl_sec=90)
         if not won:
             fail("Another request just claimed this window. Try again.")
 
+        # Write per 30-min band
         grid = _read_grid(ws0)
         day_cols = _header_day_cols(grid, dbg=dbg)
         if day_canon not in day_cols:
@@ -769,12 +811,14 @@ def handle_add(
             if c_guess is not None:
                 day_cols = dict(day_cols); day_cols[day_canon] = c_guess
         if day_canon not in day_cols:
+            _debug_dump_header_scan(grid, dbg)
+            _debug_dump_grid_head(ws0.title, grid, dbg)
             fail(f"Could not read weekday header (day '{day_canon}' missing).")
 
         c0 = day_cols[day_canon]; c1 = c0 + 1
         bands = _slot_bands_by_time(grid)
 
-        for (sdt, _edt) in _range_to_slots(start_dt, end_dt):
+        for (sdt, _edt) in req_slots:
             label = sdt.strftime("%I:%M %p").lstrip("0")
             band = bands.get(label)
             if not band:
@@ -783,6 +827,8 @@ def handle_add(
             lane_rows = list(range(r0 + 1, r1))
             if not lane_rows:
                 fail(f"Slot {label} has no lane rows defined.")
+
+            # Capacity check for UNH
             if per_slot_cap is not None:
                 filled = 0
                 for rr in lane_rows:
@@ -791,12 +837,16 @@ def handle_add(
                         filled += 1
                 if filled >= per_slot_cap:
                     fail(f"{label} just reached capacity ({filled}/{per_slot_cap}); retry another time.")
+
+            # Write into first empty lane
             wrote = False
             for rr in lane_rows:
                 v = grid[rr][c0] if (rr < len(grid) and c0 < len(grid[rr])) else ""
                 if _is_blankish(v):
-                    ws0.update_cell(rr + 1, c1, f"OA: {canon_target_name}")
+                    ws0.update_cell(rr + 1, c1 + 1, f"OA: {canon_target_name}")  # 1-based
                     wrote = True
+                    dbg(f"📝 Wrote at r{rr+1}, c{c1+1} → 'OA: {canon_target_name}'")
+                    # Keep local grid in sync for subsequent slots
                     if rr < len(grid):
                         if c0 >= len(grid[rr]):
                             grid[rr] = list(grid[rr]) + [""] * (c0 + 1 - len(grid[rr]))
@@ -804,8 +854,10 @@ def handle_add(
                     break
             if not wrote:
                 fail(f"Slot {label} filled before write; please retry.")
+
         target_title = ws0.title
 
+    # Success
     fresh_total = total_hours_from_unh_mc_and_neighbor(ss, schedule, canon_target_name)
     return (
         f"✅ Booked **{canon_target_name}** on **{target_title}** "
