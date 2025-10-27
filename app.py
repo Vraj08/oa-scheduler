@@ -265,7 +265,7 @@ with st.sidebar:
             try:
                 canon = get_canonical_roster_name(oa_name, roster_canon_by_key)
                 hours_now = compute_hours_fast(ss, schedule, canon, epoch=st.session_state["HOURS_EPOCH"])
-                st.metric("Current hours (UNH + MC + neighbor)", f"{hours_now:.1f} / 20")
+                st.metric("Current hours (UNH + MC + Oncall)", f"{hours_now:.1f} / 20")
                 st.progress(min(hours_now / 20.0, 1.0))
             except Exception as e:
                 st.caption(f"Hours unavailable: {e}")
