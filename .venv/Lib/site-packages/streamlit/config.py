@@ -1196,6 +1196,306 @@ _create_theme_options(
 )
 
 _create_theme_options(
+    "redColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Red color used in the basic color palette.
+
+        By default, this is #ff4b4b for the light theme and #ff2b2b for the
+        dark theme.
+
+        If `redColor` is provided, and `redBackgroundColor` isn't, then
+        `redBackgroundColor` will be derived from `redColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Orange color used in the basic color palette.
+
+        By default, this is #ffa421 for the light theme and #ff8700 for the
+        dark theme.
+
+        If `orangeColor` is provided, and `orangeBackgroundColor` isn't, then
+        `orangeBackgroundColor` will be derived from `orangeColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Yellow color used in the basic color palette.
+
+        By default, this is #faca2b for the light theme and #ffe312 for the
+        dark theme.
+
+        If `yellowColor` is provided, and `yellowBackgroundColor` isn't, then
+        `yellowBackgroundColor` will be derived from `yellowColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "blueColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Blue color used in the basic color palette.
+
+        By default, this is #1c83e1 for the light theme and #0068c9 for the
+        dark theme.
+
+        If a `blueColor` is provided, and `blueBackgroundColor` isn't, then
+        `blueBackgroundColor` will be derived from `blueColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "greenColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Green color used in the basic color palette.
+
+        By default, this is #21c354 for the light theme and #09ab3b for the
+        dark theme.
+
+        If `greenColor` is provided, and `greenBackgroundColor` isn't, then
+        `greenBackgroundColor` will be derived from `greenColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "violetColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Violet color used in the basic color palette.
+
+        By default, this is #803df5 for both the light and dark themes.
+
+        If a `violetColor` is provided, and `violetBackgroundColor` isn't, then
+        `violetBackgroundColor` will be derived from `violetColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "grayColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Gray color used in the basic color palette.
+
+        By default, this is #a3a8b8 for the light theme and #555867 for the
+        dark theme.
+
+        If `grayColor` is provided, and `grayBackgroundColor` isn't, then
+        `grayBackgroundColor` will be derived from `grayColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "redBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Red background color used in the basic color palette.
+
+        If `redColor` is provided, this defaults to `redColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #ff2b2b with 10% opacity for light theme and
+        #ff6c6c with 20% opacity for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Orange background color used for the basic color palette.
+
+        If `orangeColor` is provided, this defaults to `orangeColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #ffa421 with 10% opacity for the light theme and
+        #ff8700 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Yellow background color used for the basic color palette.
+
+        If `yellowColor` is provided, this defaults to `yellowColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #ffff12 with 10% opacity for the light theme and
+        #ffff12 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "blueBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Blue background color used for the basic color palette.
+
+        If `blueColor` is provided, this defaults to `blueColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #1c83ff with 10% opacity for the light theme and
+        #3d9df3 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "greenBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Green background color used for the basic color palette.
+
+        If `greenColor` is provided, this defaults to `greenColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #21c354 with 10% opacity for the light theme and
+        #3dd56d with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "violetBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Violet background color used for the basic color palette.
+
+        If `violetColor` is provided, this defaults to `violetColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #9a5dff with 10% opacity for light theme and
+        #9a5dff with 20% opacity for dark theme.
+    """,
+)
+
+_create_theme_options(
+    "grayBackgroundColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Gray background color used for the basic color palette.
+
+        If `grayColor` is provided, this defaults to `grayColor` using 10%
+        opacity for the light theme and 20% opacity for the dark theme.
+
+        Otherwise, this is #31333f with 10% opacity for the light theme and
+        #808495 with 20% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
+    "redTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Red text color used for the basic color palette.
+
+        If `redColor` is provided, this defaults to `redColor`, darkened by 15%
+        for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #bd4043 for the light theme and #ff6c6c for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "orangeTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Orange text color used for the basic color palette.
+
+        If `orangeColor` is provided, this defaults to `orangeColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #e2660c for the light theme and #ffbd45 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "yellowTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Yellow text color used for the basic color palette.
+
+        If `yellowColor` is provided, this defaults to `yellowColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #926c05 for the light theme and #ffffc2 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "blueTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Blue text color used for the basic color palette.
+
+        If `blueColor` is provided, this defaults to `blueColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #0054a3 for the light theme and #3d9df3 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "greenTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Green text color used for the basic color palette.
+
+        If `greenColor` is provided, this defaults to `greenColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #158237 for the light theme and #5ce488 for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "violetTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Violet text color used for the basic color palette.
+
+        If `violetColor` is provided, this defaults to `violetColor`, darkened
+        by 15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #583f84 for the light theme and #b27eff for the dark
+        theme.
+    """,
+)
+
+_create_theme_options(
+    "grayTextColor",
+    categories=["theme", CustomThemeCategories.SIDEBAR],
+    description="""
+        Gray text color used for the basic color palette.
+
+        If `grayColor` is provided, this defaults to `grayColor`, darkened by
+        15% for the light theme and lightened by 15% for the dark theme.
+
+        Otherwise, this is #31333f with 60% opacity for the light theme and
+        #fafafa with 60% opacity for the dark theme.
+    """,
+)
+
+_create_theme_options(
     "linkColor",
     categories=["theme", CustomThemeCategories.SIDEBAR],
     description="""
@@ -1231,6 +1531,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1310,6 +1612,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "Nunito:https://fonts.googleapis.com/css2?family=Nunito&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
 
@@ -1390,6 +1694,8 @@ _create_theme_options(
         - "serif"
         - "monospace"
         - The `family` value for a custom font table under [[theme.fontFaces]]
+        - A URL to a CSS file in the format of "<font name>:<url>" (like
+          "'Space Mono':https://fonts.googleapis.com/css2?family=Space+Mono&display=swap")
         - A comma-separated list of these (as a single string) to specify
           fallbacks
     """,

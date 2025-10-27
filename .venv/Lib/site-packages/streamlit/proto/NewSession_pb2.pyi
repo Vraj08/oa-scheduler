@@ -282,6 +282,7 @@ class CustomThemeConfig(google.protobuf.message.Message):
     BODY_FONT_FIELD_NUMBER: builtins.int
     CODE_FONT_FIELD_NUMBER: builtins.int
     FONT_FACES_FIELD_NUMBER: builtins.int
+    FONT_SOURCES_FIELD_NUMBER: builtins.int
     FONT_SIZES_FIELD_NUMBER: builtins.int
     SKELETON_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
     BASE_RADIUS_FIELD_NUMBER: builtins.int
@@ -303,6 +304,27 @@ class CustomThemeConfig(google.protobuf.message.Message):
     DATAFRAME_HEADER_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
     CHART_CATEGORICAL_COLORS_FIELD_NUMBER: builtins.int
     CHART_SEQUENTIAL_COLORS_FIELD_NUMBER: builtins.int
+    RED_COLOR_FIELD_NUMBER: builtins.int
+    ORANGE_COLOR_FIELD_NUMBER: builtins.int
+    YELLOW_COLOR_FIELD_NUMBER: builtins.int
+    BLUE_COLOR_FIELD_NUMBER: builtins.int
+    GREEN_COLOR_FIELD_NUMBER: builtins.int
+    VIOLET_COLOR_FIELD_NUMBER: builtins.int
+    GRAY_COLOR_FIELD_NUMBER: builtins.int
+    RED_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    ORANGE_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    YELLOW_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    BLUE_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    GREEN_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    VIOLET_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    GRAY_BACKGROUND_COLOR_FIELD_NUMBER: builtins.int
+    RED_TEXT_COLOR_FIELD_NUMBER: builtins.int
+    ORANGE_TEXT_COLOR_FIELD_NUMBER: builtins.int
+    YELLOW_TEXT_COLOR_FIELD_NUMBER: builtins.int
+    BLUE_TEXT_COLOR_FIELD_NUMBER: builtins.int
+    GREEN_TEXT_COLOR_FIELD_NUMBER: builtins.int
+    VIOLET_TEXT_COLOR_FIELD_NUMBER: builtins.int
+    GRAY_TEXT_COLOR_FIELD_NUMBER: builtins.int
     primary_color: builtins.str
     secondary_background_color: builtins.str
     background_color: builtins.str
@@ -333,12 +355,38 @@ class CustomThemeConfig(google.protobuf.message.Message):
     show_sidebar_border: builtins.bool
     code_background_color: builtins.str
     dataframe_header_background_color: builtins.str
+    red_color: builtins.str
+    """Main color configs:"""
+    orange_color: builtins.str
+    yellow_color: builtins.str
+    blue_color: builtins.str
+    green_color: builtins.str
+    violet_color: builtins.str
+    gray_color: builtins.str
+    red_background_color: builtins.str
+    """Background color configs:"""
+    orange_background_color: builtins.str
+    yellow_background_color: builtins.str
+    blue_background_color: builtins.str
+    green_background_color: builtins.str
+    violet_background_color: builtins.str
+    gray_background_color: builtins.str
+    red_text_color: builtins.str
+    """Text color configs:"""
+    orange_text_color: builtins.str
+    yellow_text_color: builtins.str
+    blue_text_color: builtins.str
+    green_text_color: builtins.str
+    violet_text_color: builtins.str
+    gray_text_color: builtins.str
     @property
     def radii(self) -> global___Radii:
         """DEPRECATED: Please use the base_radius theme config instead:"""
 
     @property
     def font_faces(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___FontFace]: ...
+    @property
+    def font_sources(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___FontSource]: ...
     @property
     def font_sizes(self) -> global___FontSizes:
         """DEPRECATED: Please use the base_font_size theme config instead:"""
@@ -369,6 +417,7 @@ class CustomThemeConfig(google.protobuf.message.Message):
         body_font: builtins.str = ...,
         code_font: builtins.str = ...,
         font_faces: collections.abc.Iterable[global___FontFace] | None = ...,
+        font_sources: collections.abc.Iterable[global___FontSource] | None = ...,
         font_sizes: global___FontSizes | None = ...,
         skeleton_background_color: builtins.str = ...,
         base_radius: builtins.str | None = ...,
@@ -390,15 +439,42 @@ class CustomThemeConfig(google.protobuf.message.Message):
         dataframe_header_background_color: builtins.str | None = ...,
         chart_categorical_colors: collections.abc.Iterable[builtins.str] | None = ...,
         chart_sequential_colors: collections.abc.Iterable[builtins.str] | None = ...,
+        red_color: builtins.str | None = ...,
+        orange_color: builtins.str | None = ...,
+        yellow_color: builtins.str | None = ...,
+        blue_color: builtins.str | None = ...,
+        green_color: builtins.str | None = ...,
+        violet_color: builtins.str | None = ...,
+        gray_color: builtins.str | None = ...,
+        red_background_color: builtins.str | None = ...,
+        orange_background_color: builtins.str | None = ...,
+        yellow_background_color: builtins.str | None = ...,
+        blue_background_color: builtins.str | None = ...,
+        green_background_color: builtins.str | None = ...,
+        violet_background_color: builtins.str | None = ...,
+        gray_background_color: builtins.str | None = ...,
+        red_text_color: builtins.str | None = ...,
+        orange_text_color: builtins.str | None = ...,
+        yellow_text_color: builtins.str | None = ...,
+        blue_text_color: builtins.str | None = ...,
+        green_text_color: builtins.str | None = ...,
+        violet_text_color: builtins.str | None = ...,
+        gray_text_color: builtins.str | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_base_font_size", b"_base_font_size", "_base_font_weight", b"_base_font_weight", "_base_radius", b"_base_radius", "_border_color", b"_border_color", "_button_radius", b"_button_radius", "_code_background_color", b"_code_background_color", "_code_font_size", b"_code_font_size", "_code_font_weight", b"_code_font_weight", "_dataframe_border_color", b"_dataframe_border_color", "_dataframe_header_background_color", b"_dataframe_header_background_color", "_link_color", b"_link_color", "_link_underline", b"_link_underline", "_show_sidebar_border", b"_show_sidebar_border", "_show_widget_border", b"_show_widget_border", "_sidebar", b"_sidebar", "base_font_size", b"base_font_size", "base_font_weight", b"base_font_weight", "base_radius", b"base_radius", "border_color", b"border_color", "button_radius", b"button_radius", "code_background_color", b"code_background_color", "code_font_size", b"code_font_size", "code_font_weight", b"code_font_weight", "dataframe_border_color", b"dataframe_border_color", "dataframe_header_background_color", b"dataframe_header_background_color", "font_sizes", b"font_sizes", "link_color", b"link_color", "link_underline", b"link_underline", "radii", b"radii", "show_sidebar_border", b"show_sidebar_border", "show_widget_border", b"show_widget_border", "sidebar", b"sidebar"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_base_font_size", b"_base_font_size", "_base_font_weight", b"_base_font_weight", "_base_radius", b"_base_radius", "_border_color", b"_border_color", "_button_radius", b"_button_radius", "_code_background_color", b"_code_background_color", "_code_font_size", b"_code_font_size", "_code_font_weight", b"_code_font_weight", "_dataframe_border_color", b"_dataframe_border_color", "_dataframe_header_background_color", b"_dataframe_header_background_color", "_link_color", b"_link_color", "_link_underline", b"_link_underline", "_show_sidebar_border", b"_show_sidebar_border", "_show_widget_border", b"_show_widget_border", "_sidebar", b"_sidebar", "background_color", b"background_color", "base", b"base", "base_font_size", b"base_font_size", "base_font_weight", b"base_font_weight", "base_radius", b"base_radius", "body_font", b"body_font", "border_color", b"border_color", "button_radius", b"button_radius", "chart_categorical_colors", b"chart_categorical_colors", "chart_sequential_colors", b"chart_sequential_colors", "code_background_color", b"code_background_color", "code_font", b"code_font", "code_font_size", b"code_font_size", "code_font_weight", b"code_font_weight", "dataframe_border_color", b"dataframe_border_color", "dataframe_header_background_color", b"dataframe_header_background_color", "font", b"font", "font_faces", b"font_faces", "font_sizes", b"font_sizes", "heading_font", b"heading_font", "heading_font_sizes", b"heading_font_sizes", "heading_font_weights", b"heading_font_weights", "link_color", b"link_color", "link_underline", b"link_underline", "primary_color", b"primary_color", "radii", b"radii", "secondary_background_color", b"secondary_background_color", "show_sidebar_border", b"show_sidebar_border", "show_widget_border", b"show_widget_border", "sidebar", b"sidebar", "skeleton_background_color", b"skeleton_background_color", "text_color", b"text_color", "widget_background_color", b"widget_background_color", "widget_border_color", b"widget_border_color"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["_base_font_size", b"_base_font_size", "_base_font_weight", b"_base_font_weight", "_base_radius", b"_base_radius", "_blue_background_color", b"_blue_background_color", "_blue_color", b"_blue_color", "_blue_text_color", b"_blue_text_color", "_border_color", b"_border_color", "_button_radius", b"_button_radius", "_code_background_color", b"_code_background_color", "_code_font_size", b"_code_font_size", "_code_font_weight", b"_code_font_weight", "_dataframe_border_color", b"_dataframe_border_color", "_dataframe_header_background_color", b"_dataframe_header_background_color", "_gray_background_color", b"_gray_background_color", "_gray_color", b"_gray_color", "_gray_text_color", b"_gray_text_color", "_green_background_color", b"_green_background_color", "_green_color", b"_green_color", "_green_text_color", b"_green_text_color", "_link_color", b"_link_color", "_link_underline", b"_link_underline", "_orange_background_color", b"_orange_background_color", "_orange_color", b"_orange_color", "_orange_text_color", b"_orange_text_color", "_red_background_color", b"_red_background_color", "_red_color", b"_red_color", "_red_text_color", b"_red_text_color", "_show_sidebar_border", b"_show_sidebar_border", "_show_widget_border", b"_show_widget_border", "_sidebar", b"_sidebar", "_violet_background_color", b"_violet_background_color", "_violet_color", b"_violet_color", "_violet_text_color", b"_violet_text_color", "_yellow_background_color", b"_yellow_background_color", "_yellow_color", b"_yellow_color", "_yellow_text_color", b"_yellow_text_color", "base_font_size", b"base_font_size", "base_font_weight", b"base_font_weight", "base_radius", b"base_radius", "blue_background_color", b"blue_background_color", "blue_color", b"blue_color", "blue_text_color", b"blue_text_color", "border_color", b"border_color", "button_radius", b"button_radius", "code_background_color", b"code_background_color", "code_font_size", b"code_font_size", "code_font_weight", b"code_font_weight", "dataframe_border_color", b"dataframe_border_color", "dataframe_header_background_color", b"dataframe_header_background_color", "font_sizes", b"font_sizes", "gray_background_color", b"gray_background_color", "gray_color", b"gray_color", "gray_text_color", b"gray_text_color", "green_background_color", b"green_background_color", "green_color", b"green_color", "green_text_color", b"green_text_color", "link_color", b"link_color", "link_underline", b"link_underline", "orange_background_color", b"orange_background_color", "orange_color", b"orange_color", "orange_text_color", b"orange_text_color", "radii", b"radii", "red_background_color", b"red_background_color", "red_color", b"red_color", "red_text_color", b"red_text_color", "show_sidebar_border", b"show_sidebar_border", "show_widget_border", b"show_widget_border", "sidebar", b"sidebar", "violet_background_color", b"violet_background_color", "violet_color", b"violet_color", "violet_text_color", b"violet_text_color", "yellow_background_color", b"yellow_background_color", "yellow_color", b"yellow_color", "yellow_text_color", b"yellow_text_color"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_base_font_size", b"_base_font_size", "_base_font_weight", b"_base_font_weight", "_base_radius", b"_base_radius", "_blue_background_color", b"_blue_background_color", "_blue_color", b"_blue_color", "_blue_text_color", b"_blue_text_color", "_border_color", b"_border_color", "_button_radius", b"_button_radius", "_code_background_color", b"_code_background_color", "_code_font_size", b"_code_font_size", "_code_font_weight", b"_code_font_weight", "_dataframe_border_color", b"_dataframe_border_color", "_dataframe_header_background_color", b"_dataframe_header_background_color", "_gray_background_color", b"_gray_background_color", "_gray_color", b"_gray_color", "_gray_text_color", b"_gray_text_color", "_green_background_color", b"_green_background_color", "_green_color", b"_green_color", "_green_text_color", b"_green_text_color", "_link_color", b"_link_color", "_link_underline", b"_link_underline", "_orange_background_color", b"_orange_background_color", "_orange_color", b"_orange_color", "_orange_text_color", b"_orange_text_color", "_red_background_color", b"_red_background_color", "_red_color", b"_red_color", "_red_text_color", b"_red_text_color", "_show_sidebar_border", b"_show_sidebar_border", "_show_widget_border", b"_show_widget_border", "_sidebar", b"_sidebar", "_violet_background_color", b"_violet_background_color", "_violet_color", b"_violet_color", "_violet_text_color", b"_violet_text_color", "_yellow_background_color", b"_yellow_background_color", "_yellow_color", b"_yellow_color", "_yellow_text_color", b"_yellow_text_color", "background_color", b"background_color", "base", b"base", "base_font_size", b"base_font_size", "base_font_weight", b"base_font_weight", "base_radius", b"base_radius", "blue_background_color", b"blue_background_color", "blue_color", b"blue_color", "blue_text_color", b"blue_text_color", "body_font", b"body_font", "border_color", b"border_color", "button_radius", b"button_radius", "chart_categorical_colors", b"chart_categorical_colors", "chart_sequential_colors", b"chart_sequential_colors", "code_background_color", b"code_background_color", "code_font", b"code_font", "code_font_size", b"code_font_size", "code_font_weight", b"code_font_weight", "dataframe_border_color", b"dataframe_border_color", "dataframe_header_background_color", b"dataframe_header_background_color", "font", b"font", "font_faces", b"font_faces", "font_sizes", b"font_sizes", "font_sources", b"font_sources", "gray_background_color", b"gray_background_color", "gray_color", b"gray_color", "gray_text_color", b"gray_text_color", "green_background_color", b"green_background_color", "green_color", b"green_color", "green_text_color", b"green_text_color", "heading_font", b"heading_font", "heading_font_sizes", b"heading_font_sizes", "heading_font_weights", b"heading_font_weights", "link_color", b"link_color", "link_underline", b"link_underline", "orange_background_color", b"orange_background_color", "orange_color", b"orange_color", "orange_text_color", b"orange_text_color", "primary_color", b"primary_color", "radii", b"radii", "red_background_color", b"red_background_color", "red_color", b"red_color", "red_text_color", b"red_text_color", "secondary_background_color", b"secondary_background_color", "show_sidebar_border", b"show_sidebar_border", "show_widget_border", b"show_widget_border", "sidebar", b"sidebar", "skeleton_background_color", b"skeleton_background_color", "text_color", b"text_color", "violet_background_color", b"violet_background_color", "violet_color", b"violet_color", "violet_text_color", b"violet_text_color", "widget_background_color", b"widget_background_color", "widget_border_color", b"widget_border_color", "yellow_background_color", b"yellow_background_color", "yellow_color", b"yellow_color", "yellow_text_color", b"yellow_text_color"]) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_base_font_size", b"_base_font_size"]) -> typing.Literal["base_font_size"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_base_font_weight", b"_base_font_weight"]) -> typing.Literal["base_font_weight"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_base_radius", b"_base_radius"]) -> typing.Literal["base_radius"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_blue_background_color", b"_blue_background_color"]) -> typing.Literal["blue_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_blue_color", b"_blue_color"]) -> typing.Literal["blue_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_blue_text_color", b"_blue_text_color"]) -> typing.Literal["blue_text_color"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_border_color", b"_border_color"]) -> typing.Literal["border_color"] | None: ...
     @typing.overload
@@ -414,15 +490,51 @@ class CustomThemeConfig(google.protobuf.message.Message):
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_dataframe_header_background_color", b"_dataframe_header_background_color"]) -> typing.Literal["dataframe_header_background_color"] | None: ...
     @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_gray_background_color", b"_gray_background_color"]) -> typing.Literal["gray_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_gray_color", b"_gray_color"]) -> typing.Literal["gray_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_gray_text_color", b"_gray_text_color"]) -> typing.Literal["gray_text_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_green_background_color", b"_green_background_color"]) -> typing.Literal["green_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_green_color", b"_green_color"]) -> typing.Literal["green_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_green_text_color", b"_green_text_color"]) -> typing.Literal["green_text_color"] | None: ...
+    @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_link_color", b"_link_color"]) -> typing.Literal["link_color"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_link_underline", b"_link_underline"]) -> typing.Literal["link_underline"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_orange_background_color", b"_orange_background_color"]) -> typing.Literal["orange_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_orange_color", b"_orange_color"]) -> typing.Literal["orange_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_orange_text_color", b"_orange_text_color"]) -> typing.Literal["orange_text_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_red_background_color", b"_red_background_color"]) -> typing.Literal["red_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_red_color", b"_red_color"]) -> typing.Literal["red_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_red_text_color", b"_red_text_color"]) -> typing.Literal["red_text_color"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_show_sidebar_border", b"_show_sidebar_border"]) -> typing.Literal["show_sidebar_border"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_show_widget_border", b"_show_widget_border"]) -> typing.Literal["show_widget_border"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_sidebar", b"_sidebar"]) -> typing.Literal["sidebar"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_violet_background_color", b"_violet_background_color"]) -> typing.Literal["violet_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_violet_color", b"_violet_color"]) -> typing.Literal["violet_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_violet_text_color", b"_violet_text_color"]) -> typing.Literal["violet_text_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_yellow_background_color", b"_yellow_background_color"]) -> typing.Literal["yellow_background_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_yellow_color", b"_yellow_color"]) -> typing.Literal["yellow_color"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_yellow_text_color", b"_yellow_text_color"]) -> typing.Literal["yellow_text_color"] | None: ...
 
 global___CustomThemeConfig = CustomThemeConfig
 
@@ -460,6 +572,27 @@ class FontFace(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["family", b"family", "style", b"style", "unicode_range", b"unicode_range", "url", b"url", "weight", b"weight", "weight_range", b"weight_range"]) -> None: ...
 
 global___FontFace = FontFace
+
+@typing.final
+class FontSource(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    CONFIG_NAME_FIELD_NUMBER: builtins.int
+    SOURCE_URL_FIELD_NUMBER: builtins.int
+    config_name: builtins.str
+    """Supports passing links to font config options - these are the sources
+    used in the <link> tag (href) to embed the font in html
+    """
+    source_url: builtins.str
+    def __init__(
+        self,
+        *,
+        config_name: builtins.str = ...,
+        source_url: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["config_name", b"config_name", "source_url", b"source_url"]) -> None: ...
+
+global___FontSource = FontSource
 
 @typing.final
 class Radii(google.protobuf.message.Message):

@@ -18,15 +18,18 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 from typing import TYPE_CHECKING, Callable, Literal, TypedDict, Union
 
 from typing_extensions import NotRequired, TypeAlias
 
+from streamlit.elements.lib.color_util import is_css_color_like
+from streamlit.errors import StreamlitValueError
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import validate_material_icon
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
 NumberFormat: TypeAlias = Literal[
     "plain",
@@ -62,8 +65,56 @@ ColumnType: TypeAlias = Literal[
     "area_chart",
     "image",
     "progress",
+    "multiselect",
     "json",
 ]
+
+# Themeable colors supported in the theme config:
+ThemeColor: TypeAlias = Literal[
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "orange",
+    "violet",
+    "gray",
+    "grey",
+    "primary",
+]
+
+# Color options for chart columns:
+ChartColor: TypeAlias = Union[
+    Literal["auto", "auto-inverse"],
+    ThemeColor,
+    str,
+]
+
+
+def _validate_chart_color(maybe_color: str) -> None:
+    """Validate a color for a chart column."""
+
+    supported_colors = [
+        "auto",
+        "auto-inverse",
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "violet",
+        "orange",
+        "gray",
+        "grey",
+        "primary",
+    ]
+    if maybe_color not in supported_colors and not is_css_color_like(maybe_color):
+        raise StreamlitValueError(
+            "color",
+            [
+                *supported_colors,
+                "a valid hex color",
+                "an rgb() or rgba() color",
+            ],
+        )
 
 
 class NumberColumnConfig(TypedDict):
@@ -108,18 +159,21 @@ class BarChartColumnConfig(TypedDict):
     type: Literal["bar_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class LineChartColumnConfig(TypedDict):
     type: Literal["line_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class AreaChartColumnConfig(TypedDict):
     type: Literal["area_chart"]
     y_min: NotRequired[int | float | None]
     y_max: NotRequired[int | float | None]
+    color: NotRequired[ChartColor | None]
 
 
 class ImageColumnConfig(TypedDict):
@@ -128,6 +182,18 @@ class ImageColumnConfig(TypedDict):
 
 class ListColumnConfig(TypedDict):
     type: Literal["list"]
+
+
+class MultiselectOption(TypedDict):
+    value: str
+    label: NotRequired[str | None]
+    color: NotRequired[str | ThemeColor | None]
+
+
+class MultiselectColumnConfig(TypedDict):
+    type: Literal["multiselect"]
+    options: NotRequired[Iterable[MultiselectOption | str] | None]
+    accept_new_options: NotRequired[bool | None]
 
 
 class DatetimeColumnConfig(TypedDict):
@@ -174,11 +240,11 @@ class ColumnConfig(TypedDict, total=False):
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -188,7 +254,11 @@ class ColumnConfig(TypedDict, total=False):
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -196,34 +266,34 @@ class ColumnConfig(TypedDict, total=False):
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: str, bool, int, float, or None
+    default : str, bool, int, float, or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    hidden: bool or None
+    hidden : bool or None
         Whether to hide the column. This defaults to ``False``.
 
-    type_config: dict or str or None
+    type_config : dict or str or None
         Configure a column type and type specific options.
     """
 
@@ -251,6 +321,7 @@ class ColumnConfig(TypedDict, total=False):
         | BarChartColumnConfig
         | AreaChartColumnConfig
         | ImageColumnConfig
+        | MultiselectColumnConfig
         | JsonColumnConfig
         | None
     )
@@ -278,11 +349,11 @@ def Column(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -292,7 +363,11 @@ def Column(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -300,21 +375,21 @@ def Column(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
@@ -382,11 +457,11 @@ def NumberColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -396,7 +471,11 @@ def NumberColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -404,31 +483,31 @@ def NumberColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: int, float, or None
+    default : int, float, or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format:  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
+    format :  str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how numbers are displayed.
         This can be one of the following values:
 
@@ -455,15 +534,15 @@ def NumberColumn(
         formatting from ``pandas.Styler``. The formatting does not impact the
         return value when used in ``st.data_editor``.
 
-    min_value: int, float, or None
+    min_value : int, float, or None
         The minimum value that can be entered. If this is ``None`` (default),
         there will be no minimum.
 
-    max_value: int, float, or None
+    max_value : int, float, or None
         The maximum value that can be entered. If this is ``None`` (default),
         there will be no maximum.
 
-    step: int, float, or None
+    step : int, float, or None
         The precision of numbers that can be entered. If this ``None``
         (default), integer columns will have a step of 1 and float columns will
         have unrestricted precision. In this case, some floats may display like
@@ -544,11 +623,11 @@ def TextColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -558,7 +637,11 @@ def TextColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -566,35 +649,35 @@ def TextColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: str or None
+    default : str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    max_chars: int or None
+    max_chars : int or None
         The maximum number of characters that can be entered. If this is
         ``None`` (default), there will be no maximum.
 
-    validate: str or None
+    validate : str or None
         A JS-flavored regular expression (e.g. ``"^[a-z]+$"``) that edited
         values are validated against. If the user input is invalid, it will not
         be submitted.
@@ -666,11 +749,11 @@ def LinkColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -680,7 +763,11 @@ def LinkColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -688,40 +775,40 @@ def LinkColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: str or None
+    default : str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    max_chars: int or None
+    max_chars : int or None
         The maximum number of characters that can be entered. If this is
         ``None`` (default), there will be no maximum.
 
-    validate: str or None
+    validate : str or None
         A JS-flavored regular expression (e.g. ``"^https://.+$"``) that edited
         values are validated against. If the user input is invalid, it will not
         be submitted.
 
-    display_text: str or None
+    display_text : str or None
         The text that is displayed in the cell. This can be one of the
         following:
 
@@ -824,11 +911,11 @@ def CheckboxColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -838,7 +925,11 @@ def CheckboxColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -846,27 +937,27 @@ def CheckboxColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: bool or None
+    default : bool or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
@@ -933,11 +1024,11 @@ def SelectboxColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -947,7 +1038,11 @@ def SelectboxColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -955,42 +1050,41 @@ def SelectboxColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: str, int, float, bool, or None
+    default : str, int, float, bool, or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    options: Iterable[str, int, float, bool] or None
+    options : Iterable[str, int, float, bool] or None
         The options that can be selected during editing. If this is ``None``
         (default), the options will be inferred from the underlying dataframe
         column if its dtype is "category". For more information, see `Pandas docs
         <https://pandas.pydata.org/docs/user_guide/categorical.html>`_).
 
-    format_func: function or None
+    format_func : function or None
         Function to modify the display of the options. It receives
         the raw option defined in ``options`` as an argument and should output
         the label to be shown for that option. If this is ``None`` (default),
         the raw option is used as the label.
-
 
     Examples
     --------
@@ -1064,6 +1158,7 @@ def BarChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a bar chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1073,11 +1168,11 @@ def BarChartColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1087,7 +1182,11 @@ def BarChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1101,13 +1200,26 @@ def BarChartColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    y_min: int, float, or None
+    y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the minimum of its data.
 
-    y_max: int, float, or None
+    y_max : int, float, or None
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
+
+    color : "auto", "auto-inverse", str, or None
+        The color to use for the chart. This can be one of the following:
+
+        - ``None`` (default): The primary color is used.
+        - ``"auto"``: If the data is increasing, the chart is green; if the
+          data is decreasing, the chart is red.
+        - ``"auto-inverse"``: If the data is increasing, the chart is red; if
+          the data is decreasing, the chart is green.
+        - A single color value that is applied to all charts in the column.
+          In addition to the basic color palette (red, orange, yellow, green,
+          blue, violet, gray/grey, and primary), this supports hex codes like
+          ``"#483d8b"``.
 
     Examples
     --------
@@ -1143,12 +1255,17 @@ def BarChartColumn(
         height: 300px
     """
 
+    if color is not None:
+        _validate_chart_color(color)
+
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         pinned=pinned,
-        type_config=BarChartColumnConfig(type="bar_chart", y_min=y_min, y_max=y_max),
+        type_config=BarChartColumnConfig(
+            type="bar_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1161,6 +1278,7 @@ def LineChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure a line chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1170,11 +1288,11 @@ def LineChartColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1184,7 +1302,11 @@ def LineChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1192,19 +1314,32 @@ def LineChartColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    y_min: int, float, or None
+    y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the minimum of its data.
 
-    y_max: int, float, or None
+    y_max : int, float, or None
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
+
+    color : "auto", "auto-inverse", str, or None
+        The color to use for the chart. This can be one of the following:
+
+        - ``None`` (default): The primary color is used.
+        - ``"auto"``: If the data is increasing, the chart is green; if the
+          data is decreasing, the chart is red.
+        - ``"auto-inverse"``: If the data is increasing, the chart is red; if
+          the data is decreasing, the chart is green.
+        - A single color value that is applied to all charts in the column.
+          In addition to the basic color palette (red, orange, yellow, green,
+          blue, violet, gray/grey, and primary), this supports hex codes like
+          ``"#483d8b"``.
 
     Examples
     --------
@@ -1240,13 +1375,16 @@ def LineChartColumn(
         https://doc-linechart-column.streamlit.app/
         height: 300px
     """
-
+    if color is not None:
+        _validate_chart_color(color)
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         pinned=pinned,
-        type_config=LineChartColumnConfig(type="line_chart", y_min=y_min, y_max=y_max),
+        type_config=LineChartColumnConfig(
+            type="line_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1259,6 +1397,7 @@ def AreaChartColumn(
     pinned: bool | None = None,
     y_min: int | float | None = None,
     y_max: int | float | None = None,
+    color: ChartColor | None = None,
 ) -> ColumnConfig:
     """Configure an area chart column in ``st.dataframe`` or ``st.data_editor``.
 
@@ -1268,11 +1407,11 @@ def AreaChartColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1282,7 +1421,11 @@ def AreaChartColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1290,19 +1433,34 @@ def AreaChartColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    y_min: int, float, or None
+    y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the minimum of its data.
 
-    y_max: int, float, or None
+    y_max : int, float, or None
         The maximum value on the y-axis for all cells in the column. If this is
         ``None`` (default), every cell will use the maximum of its data.
+
+    color : "auto", "auto-inverse", str, or None
+        The color to use for the chart. This can be one of the following:
+
+        - ``None`` (default): The primary color is used.
+        - ``"auto"``: If the data is increasing, the chart is green; if the
+          data is decreasing, the chart is red.
+        - ``"auto-inverse"``: If the data is increasing, the chart is red; if
+          the data is decreasing, the chart is green.
+        - A single color value that is applied to all charts in the column.
+          In addition to the basic color palette (red, orange, yellow, green,
+          blue, violet, gray/grey, and primary), this supports hex codes like
+          ``"#483d8b"``.
+
+        The basic color palette can be configured in the theme settings.
 
     Examples
     --------
@@ -1339,12 +1497,16 @@ def AreaChartColumn(
         height: 300px
     """
 
+    if color is not None:
+        _validate_chart_color(color)
     return ColumnConfig(
         label=label,
         width=width,
         help=help,
         pinned=pinned,
-        type_config=AreaChartColumnConfig(type="area_chart", y_min=y_min, y_max=y_max),
+        type_config=AreaChartColumnConfig(
+            type="area_chart", y_min=y_min, y_max=y_max, color=color
+        ),
     )
 
 
@@ -1372,11 +1534,11 @@ def ImageColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1386,7 +1548,11 @@ def ImageColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1394,7 +1560,7 @@ def ImageColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
@@ -1454,20 +1620,21 @@ def ListColumn(
 
     This is the default column type for list-like values. This command needs to
     be used in the ``column_config`` parameter of ``st.dataframe`` or
-    ``st.data_editor``.
+    ``st.data_editor``. When used with ``st.data_editor``, users can freely
+    type in new options and remove existing ones.
 
     .. Note::
         Editing for non-string or mixed type lists can cause issues with Arrow
-        serialization. We recommend you disable editing for these columns or
-        convert of all list values to strings.
+        serialization. We recommend that you disable editing for these columns
+        or convert all list values to strings.
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1477,7 +1644,11 @@ def ListColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1485,27 +1656,27 @@ def ListColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    default: Iterable of str or None
+    default : Iterable of str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
@@ -1553,6 +1724,234 @@ def ListColumn(
     )
 
 
+@gather_metrics("column_config.MultiselectColumn")
+def MultiselectColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    disabled: bool | None = None,
+    required: bool | None = None,
+    default: Iterable[str] | None = None,
+    options: Iterable[str] | None = None,
+    accept_new_options: bool | None = None,
+    color: str | ThemeColor | Iterable[str | ThemeColor] | None = None,
+    format_func: Callable[[str], str] | None = None,
+) -> ColumnConfig:
+    """Configure a multiselect column in ``st.dataframe`` or ``st.data_editor``.
+
+    This command needs to be used in the ``column_config`` parameter of
+    ``st.dataframe`` or ``st.data_editor``. When used with ``st.data_editor``,
+    users can select options from a dropdown menu. You can configure the
+    column to allow freely typed options, too.
+
+    You can also use this column type to display colored labels in a read-only
+    ``st.dataframe``.
+
+    .. Note::
+        Editing for non-string or mixed type lists can cause issues with Arrow
+        serialization. We recommend that you disable editing for these columns
+        or convert all list values to strings.
+
+    Parameters
+    ----------
+    label : str or None
+        The label shown at the top of the column. If None (default),
+        the column name is used.
+
+    width : "small", "medium", "large", or None
+        The display width of the column. If this is ``None`` (default), the
+        column will be sized to fit the cell contents. Otherwise, this can be
+        one of the following:
+
+        - ``"small"``: 75px wide
+        - ``"medium"``: 200px wide
+        - ``"large"``: 400px wide
+        - An integer specifying the width in pixels
+
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
+        A tooltip that gets displayed when hovering over the column label. If
+        this is ``None`` (default), no tooltip is displayed.
+
+        The tooltip can optionally contain GitHub-flavored Markdown, including
+        the Markdown directives described in the ``body`` parameter of
+        ``st.markdown``.
+
+    disabled : bool or None
+        Whether editing should be disabled for this column. Defaults to False.
+
+    required : bool or None
+        Whether edited cells in the column need to have a value. If True, an edited cell
+        can only be submitted if it has a value other than None. Defaults to False.
+
+    default : Iterable of str or None
+        Specifies the default value in this column when a new row is added by the user.
+
+    options : Iterable of str or None
+        The options that can be selected during editing.
+
+    accept_new_options : bool or None
+        Whether the user can add selections that aren't included in ``options``.
+        If this is ``False`` (default), the user can only select from the
+        items in ``options``. If this is ``True``, the user can enter new
+        items that don't exist in ``options``.
+
+        When a user enters and selects a new item, it is included in the
+        returned cell list value as a string. The new item is not added to
+        the options drop-down menu.
+
+    color : str, Iterable of str, or None
+        The color to use for different options. This can be:
+
+        - None (default): The options are displayed without color.
+        - A single color value that is used for all options. This can be one of
+          the following strings:
+
+            - ``"primary"`` to use the primary theme color.
+            - A CSS named color name like ``"darkBlue"`` or ``"maroon"``.
+            - A hex color code like ``"#483d8b"`` or ``"#6A5ACD80"``.
+            - An RGB or RGBA color code like ``"rgb(255,0,0)"`` or
+              ``"RGB(70, 130, 180, .7)"``.
+            - An HSL or HSLA color code like ``"hsl(248, 53%, 58%)"``
+              or ``"HSL(147, 50%, 47%, .3)"``.
+
+        - An iterable of color values that are mapped to the options. The colors
+          are applied in sequence, cycling through the iterable if there are
+          more options than colors.
+
+    format_func : function or None
+        Function to modify the display of the options. It receives
+        the raw option defined in ``options`` as an argument and should output
+        the label to be shown for that option. When used in ``st.data_editor``,
+        this has no impact on the returned value. If this is ``None``
+        (default), the raw option is used as the label.
+
+    Examples
+    --------
+    **Example 1: Editable multiselect column**
+
+    To customize the label colors, provide a list of colors to the ``color``
+    parameter. You can also format the option labels with the ``format_func``
+    parameter.
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    ...     {
+    ...         "category": [
+    ...             ["exploration", "visualization"],
+    ...             ["llm", "visualization"],
+    ...             ["exploration"],
+    ...         ],
+    ...     }
+    ... )
+    >>>
+    >>> st.data_editor(
+    ...     data_df,
+    ...     column_config={
+    ...         "category": st.column_config.MultiselectColumn(
+    ...             "App Categories",
+    ...             help="The categories of the app",
+    ...             options=[
+    ...                 "exploration",
+    ...                 "visualization",
+    ...                 "llm",
+    ...             ],
+    ...             color=["#ffa421", "#803df5", "#00c0f2"],
+    ...             format_func=lambda x: x.capitalize(),
+    ...         ),
+    ...     },
+    ... )
+
+    .. output::
+        https://doc-multiselect-column-1.streamlit.app/
+        height: 300px
+
+    **Example 2: Colored tags for st.dataframe**
+
+    When using ``st.dataframe``, the multiselect column is read-only
+    and can be used to display colored tags. In this example, the dataframe
+    uses the primary theme color for all tags.
+
+    >>> import pandas as pd
+    >>> import streamlit as st
+    >>>
+    >>> data_df = pd.DataFrame(
+    ...     {
+    ...         "category": [
+    ...             ["exploration", "visualization"],
+    ...             ["llm", "visualization"],
+    ...             ["exploration"],
+    ...         ],
+    ...     }
+    ... )
+    >>>
+    >>> st.dataframe(
+    ...     data_df,
+    ...     column_config={
+    ...         "category": st.column_config.MultiselectColumn(
+    ...             "App Categories",
+    ...             options=["exploration", "visualization", "llm"],
+    ...             color="primary",
+    ...             format_func=lambda x: x.capitalize(),
+    ...         ),
+    ...     },
+    ... )
+
+    .. output::
+        https://doc-multiselect-column-2.streamlit.app/
+        height: 300px
+    """
+
+    # Process options with color and format_func:
+    processed_options: list[MultiselectOption] | None = None
+    if options is not None:
+        processed_options = []
+
+        # Convert color to an iterator
+        color_iter: Iterator[str] | None = None
+        if color is not None:
+            if isinstance(color, str):
+                # Single color for all options
+                color_iter = itertools.repeat(color)
+            else:
+                # Iterable of colors - cycle through them
+                color_iter = itertools.cycle(color)
+
+        for option in options:
+            # Start with the option value
+            option_dict = MultiselectOption(value=option)
+
+            # Apply format_func to generate label if not already present
+            if format_func is not None:
+                option_dict["label"] = format_func(option_dict["value"])
+
+            # Apply color if provided and not already present
+            if color_iter is not None and "color" not in option_dict:
+                option_dict["color"] = next(color_iter)
+
+            processed_options.append(option_dict)
+
+    return ColumnConfig(
+        label=label,
+        width=width,
+        help=help,
+        disabled=disabled,
+        required=required,
+        default=None if default is None else list(default),
+        type_config=MultiselectColumnConfig(
+            type="multiselect",
+            options=processed_options,
+            accept_new_options=accept_new_options,
+        ),
+    )
+
+
 @gather_metrics("column_config.DatetimeColumn")
 def DatetimeColumn(
     label: str | None = None,
@@ -1578,11 +1977,11 @@ def DatetimeColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1592,7 +1991,11 @@ def DatetimeColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1600,31 +2003,31 @@ def DatetimeColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: datetime.datetime or None
+    default : datetime.datetime or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str, "localized", "distance", "calendar", "iso8601", or None
+    format : str, "localized", "distance", "calendar", "iso8601", or None
         A format string controlling how datetimes are displayed.
         This can be one of the following values:
 
@@ -1646,19 +2049,19 @@ def DatetimeColumn(
         formatting from ``pandas.Styler``. The formatting does not impact the
         return value when used in ``st.data_editor``.
 
-    min_value: datetime.datetime or None
+    min_value : datetime.datetime or None
         The minimum datetime that can be entered. If this is ``None``
         (default), there will be no minimum.
 
-    max_value: datetime.datetime or None
+    max_value : datetime.datetime or None
         The maximum datetime that can be entered. If this is ``None``
         (default), there will be no maximum.
 
-    step: int, float, datetime.timedelta, or None
+    step : int, float, datetime.timedelta, or None
         The stepping interval in seconds. If this is ``None`` (default), the
         step will be 1 second.
 
-    timezone: str or None
+    timezone : str or None
         The timezone of this column. If this is ``None`` (default), the
         timezone is inferred from the underlying data.
 
@@ -1740,11 +2143,11 @@ def TimeColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1754,7 +2157,11 @@ def TimeColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1762,31 +2169,31 @@ def TimeColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: datetime.time or None
+    default : datetime.time or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str, "localized", "iso8601", or None
+    format : str, "localized", "iso8601", or None
         A format string controlling how times are displayed.
         This can be one of the following values:
 
@@ -1804,15 +2211,15 @@ def TimeColumn(
         formatting from ``pandas.Styler``. The formatting does not impact the
         return value when used in ``st.data_editor``.
 
-    min_value: datetime.time or None
+    min_value : datetime.time or None
         The minimum time that can be entered. If this is ``None`` (default),
         there will be no minimum.
 
-    max_value: datetime.time or None
+    max_value : datetime.time or None
         The maximum time that can be entered. If this is ``None`` (default),
         there will be no maximum.
 
-    step: int, float, datetime.timedelta, or None
+    step : int, float, datetime.timedelta, or None
         The stepping interval in seconds. If this is ``None`` (default), the
         step will be 1 second.
 
@@ -1893,11 +2300,11 @@ def DateColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -1907,7 +2314,11 @@ def DateColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -1915,31 +2326,31 @@ def DateColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    disabled: bool or None
+    disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
         (default), Streamlit will enable editing wherever possible.
 
         If a column has mixed types, it may become uneditable regardless of
         ``disabled``.
 
-    required: bool or None
+    required : bool or None
         Whether edited cells in the column need to have a value. If this is
         ``False`` (default), the user can submit empty values for this column.
         If this is ``True``, an edited cell in this column can only be
         submitted if its value is not ``None``, and a new row will only be
         submitted after the user fills in this column.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    default: datetime.date or None
+    default : datetime.date or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
 
-    format: str, "localized", "distance", "iso8601", or None
+    format : str, "localized", "distance", "iso8601", or None
         A format string controlling how dates are displayed.
         This can be one of the following values:
 
@@ -1959,15 +2370,15 @@ def DateColumn(
         formatting from ``pandas.Styler``. The formatting does not impact the
         return value when used in ``st.data_editor``.
 
-    min_value: datetime.date or None
+    min_value : datetime.date or None
         The minimum date that can be entered. If this is ``None`` (default),
         there will be no minimum.
 
-    max_value: datetime.date or None
+    max_value : datetime.date or None
         The maximum date that can be entered. If this is ``None`` (default),
         there will be no maximum.
 
-    step: int or None
+    step : int or None
         The stepping interval in days. If this is ``None`` (default), the step
         will be 1 day.
 
@@ -2044,11 +2455,11 @@ def ProgressColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -2058,7 +2469,11 @@ def ProgressColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -2066,7 +2481,7 @@ def ProgressColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    format: str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
+    format : str, "plain", "localized", "percent", "dollar", "euro", "yen", "accounting", "compact", "scientific", "engineering", or None
         A format string controlling how the numbers are displayed.
         This can be one of the following values:
 
@@ -2093,21 +2508,21 @@ def ProgressColumn(
         number formatting from ``pandas.Styler``. The number formatting does
         not impact the return value when used in ``st.data_editor``.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
-    min_value: int, float, or None
+    min_value : int, float, or None
         The minimum value of the progress bar. If this is ``None`` (default),
         the minimum will be 0.
 
-    max_value: int, float, or None
+    max_value : int, float, or None
         The maximum value of the progress bar. If this is ``None`` (default),
         the maximum will be 100 for integer values and 1.0 for float values.
 
-    step: int, float, or None
+    step : int, float, or None
         The precision of numbers. If this is ``None`` (default), integer columns
         will have a step of 1 and float columns will have a step of 0.01.
         Setting ``step`` for float columns will ensure a consistent number of
@@ -2174,11 +2589,11 @@ def JsonColumn(
 
     Parameters
     ----------
-    label: str or None
+    label : str or None
         The label shown at the top of the column. If this is ``None``
         (default), the column name is used.
 
-    width: "small", "medium", "large", int, or None
+    width : "small", "medium", "large", int, or None
         The display width of the column. If this is ``None`` (default), the
         column will be sized to fit the cell contents. Otherwise, this can be
         one of the following:
@@ -2188,7 +2603,11 @@ def JsonColumn(
         - ``"large"``: 400px wide
         - An integer specifying the width in pixels
 
-    help: str or None
+        If the total width of all columns is less than the width of the
+        dataframe, the remaining space will be distributed evenly among all
+        columns.
+
+    help : str or None
         A tooltip that gets displayed when hovering over the column label. If
         this is ``None`` (default), no tooltip is displayed.
 
@@ -2196,7 +2615,7 @@ def JsonColumn(
         the Markdown directives described in the ``body`` parameter of
         ``st.markdown``.
 
-    pinned: bool or None
+    pinned : bool or None
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
