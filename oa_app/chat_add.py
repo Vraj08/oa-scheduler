@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple, Dict, Callable
 import re
 import streamlit as st
 import gspread
+from .hours import invalidate_hours_caches
 
 from .locks import get_or_create_locks_sheet, acquire_fcfs_lock, lock_key
 from .utils import fmt_time
@@ -792,6 +793,15 @@ def handle_add(
             if _is_blankish(v):
                 ws.update_cell(rr + 1, c1 + 1, f"OA: {canon_target_name}")  # gspread is 1-based
                 wrote = True
+                # Force hours + pictorial recompute after On-Call add
+                try:
+                    invalidate_hours_caches()  # bumps HOURS_EPOCH for compute_hours_fast cache_data
+                    ts = datetime.now().timestamp()
+                    st.session_state["schedule_refresh_key"] = ts
+                    st.session_state["hours_refresh_key"] = ts
+                except Exception:
+                    pass
+
                 dbg(f"📝 Wrote at r{rr+1}, c{c1+1} → 'OA: {canon_target_name}'")
                 break
         if not wrote:

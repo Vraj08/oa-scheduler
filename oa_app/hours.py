@@ -61,13 +61,37 @@ def _resolve_title(actuals: List[gspread.Worksheet], wanted: str) -> str | None:
 
 def _three_titles_unh_mc_oncall(ss: gspread.Spreadsheet) -> list[str]:
     try:
-        ws_list = ss.worksheets()
+        ws_all = ss.worksheets()            # includes hidden
     except Exception:
         return []
 
+    # Build a visible-only list in the same UI order
+    def _is_hidden(w):
+        try:
+            return bool(getattr(w, "_properties", {}).get("hidden", False))
+        except Exception:
+            return False
+
+    ws_visible = [w for w in ws_all if not _is_hidden(w)]
+
     unh_cfg, mc_cfg = OA_SCHEDULE_SHEETS[0], OA_SCHEDULE_SHEETS[1]
-    unh_title = _resolve_title(ws_list, unh_cfg)
-    mc_title  = _resolve_title(ws_list, mc_cfg)
+
+    # Resolve UNH/MC against visible list first (so titles match what the user sees)
+    def _resolve_title_visible(wanted: str) -> str | None:
+        wanted_low = (wanted or "").strip().lower()
+        by_low = {w.title.strip().lower(): w.title for w in ws_visible}
+        if wanted_low in by_low:
+            return by_low[wanted_low]
+        first = wanted_low.split()[0] if wanted_low else ""
+        for w in ws_visible:
+            t = w.title.strip(); tl = t.lower()
+            if tl == wanted_low or (first and tl.startswith(first)):
+                return t
+        # fallback to any sheet (rare)
+        return _resolve_title(ws_all, wanted)
+
+    unh_title = _resolve_title_visible(unh_cfg)
+    mc_title  = _resolve_title_visible(mc_cfg)
 
     out: list[str] = []
     if unh_title:
@@ -75,36 +99,37 @@ def _three_titles_unh_mc_oncall(ss: gspread.Spreadsheet) -> list[str]:
     if mc_title:
         out.append(mc_title)
 
-    # Prefer explicit override; else pick the physical neighbor to MC’s right.
+    # Prefer explicit override; else pick the **visible** neighbor to MC’s right.
     oncall_title = None
     if mc_title:
         if ONCALL_SHEET_OVERRIDE and ONCALL_SHEET_OVERRIDE.strip():
-            cand = _resolve_title(ws_list, ONCALL_SHEET_OVERRIDE)
+            cand = _resolve_title_visible(ONCALL_SHEET_OVERRIDE)
             if cand:
                 oncall_title = cand
         else:
+            # Find MC index within the visible sheets list
             try:
-                idx = next(i for i, w in enumerate(ws_list) if w.title == mc_title)
+                idx = next(i for i, w in enumerate(ws_visible) if w.title == mc_title)
             except StopIteration:
                 idx = -1
             if idx >= 0:
                 j = idx + 1
-                while j < len(ws_list):
-                    cand = ws_list[j].title
+                while j < len(ws_visible):
+                    cand = ws_visible[j].title
                     if cand.strip().lower() not in _DENY_LOW:
                         oncall_title = cand
                         break
                     j += 1
+
     if oncall_title:
         out.append(oncall_title)
 
-    # de-dup
+    # De-dup
     seen, final = set(), []
     for t in out:
         if t and t not in seen:
             seen.add(t); final.append(t)
     return final
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Name matching (handles "OA: Name", "GOA: Name", "Name1 & Name2")
