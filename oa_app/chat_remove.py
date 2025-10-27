@@ -22,7 +22,7 @@ from .chat_add import (
     _find_working_oncall_ws, _resolve_campus_title,
     _is_blankish,
 )
-from .hours import total_hours_from_unh_mc_and_neighbor
+from .hours import total_hours_from_unh_mc_and_neighbor, invalidate_hours_caches
 
 
 def handle_remove(
@@ -71,6 +71,8 @@ def handle_remove(
         fail(f"Couldn't understand the day '{day}'.")
     dbg(f"🧭 Day parsed: {day_canon}")
 
+    any_removed = False  # track for cache invalidation
+
     # ---------- ON-CALL ----------
     if campus_kind == "ONCALL":
         # Open tab directly (avoid schedule._get_sheet which expects weekday headers)
@@ -112,7 +114,7 @@ def handle_remove(
             fail(f"Could not read weekday header from '{ws.title}'.")
 
         c0 = day_cols[day_canon]
-        c1 = c0  # same column holds the OA names
+        c1 = c0  # same column holds the OA names (correct for On-Call)
 
         want_s = start_dt.strftime("%I:%M %p")
         want_e = end_dt.strftime("%I:%M %p")
@@ -130,6 +132,7 @@ def handle_remove(
             if v and canon_target_name.lower() in v.lower():
                 ws.update_cell(rr + 1, c1 + 1, "")  # gspread is 1-based
                 removed = True
+                any_removed = True
                 dbg(f"🧹 Cleared row {rr+1}, col {c1+1} → '{v}'")
         if not removed:
             fail(f"{canon_target_name} not found in block '{want_s} – {want_e}'.")
@@ -150,7 +153,8 @@ def handle_remove(
             fail(f"Could not read weekday header (day '{day_canon}' missing).")
 
         c0 = day_cols[day_canon]
-        c1 = c0 + 1
+        # ✅ FIX: names are in the SAME column as the header (like in handle_add). Do NOT shift by +1.
+        col_1based = c0 + 1
 
         # Build time bands
         rows = [r for r, row in enumerate(grid)
@@ -172,12 +176,28 @@ def handle_remove(
             for rr in lane_rows:
                 v = grid[rr][c0] if (rr < len(grid) and c0 < len(grid[rr])) else ""
                 if v and canon_target_name.lower() in v.lower():
-                    ws0.update_cell(rr + 1, c1 + 1, "")
-                    dbg(f"🧹 Cleared {label} r{rr+1} c{c1+1}")
+                    ws0.update_cell(rr + 1, col_1based, "")   # ← write to correct column
                     cleared = True
+                    any_removed = True
+                    dbg(f"🧹 Cleared {label} r{rr+1} c{col_1based}")
+                    # keep local grid in sync for subsequent slots
+                    if rr < len(grid):
+                        if c0 >= len(grid[rr]):
+                            grid[rr] = list(grid[rr]) + [""] * (c0 + 1 - len(grid[rr]))
+                        grid[rr][c0] = ""
             if not cleared:
                 dbg(f"⚠️ {label}: {canon_target_name} not found in any lane.")
         target_title = ws0.title
+
+    # Invalidate caches / trigger UI refresh (totals + pictorial), mirroring handle_add
+    if any_removed:
+        try:
+            invalidate_hours_caches()
+            ts = datetime.now().timestamp()
+            st.session_state["schedule_refresh_key"] = ts
+            st.session_state["hours_refresh_key"] = ts
+        except Exception:
+            pass
 
     # Success message
     fresh_total = total_hours_from_unh_mc_and_neighbor(ss, schedule, canon_target_name)
