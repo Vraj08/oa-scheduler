@@ -825,7 +825,11 @@ def handle_add(
             _debug_dump_grid_head(ws0.title, grid, dbg)
             fail(f"Could not read weekday header (day '{day_canon}' missing).")
 
-        c0 = day_cols[day_canon]; c1 = c0 + 1
+        # Resolve target weekday column (0-based in our grid)
+        c0 = day_cols[day_canon]
+        # Convert to 1-based just for gspread calls
+        col_1based = c0 + 1
+
         bands = _slot_bands_by_time(grid)
 
         for (sdt, _edt) in req_slots:
@@ -853,9 +857,10 @@ def handle_add(
             for rr in lane_rows:
                 v = grid[rr][c0] if (rr < len(grid) and c0 < len(grid[rr])) else ""
                 if _is_blankish(v):
-                    ws0.update_cell(rr + 1, c1 + 1, f"OA: {canon_target_name}")  # 1-based
+                    # ✅ Correct: row is 1-based, col is col_1based
+                    ws0.update_cell(rr + 1, col_1based, f"OA: {canon_target_name}")
                     wrote = True
-                    dbg(f"📝 Wrote at r{rr+1}, c{c1+1} → 'OA: {canon_target_name}'")
+                    dbg(f"📝 Wrote at r{rr+1}, c{col_1based} → 'OA: {canon_target_name}'")
                     # Keep local grid in sync for subsequent slots
                     if rr < len(grid):
                         if c0 >= len(grid[rr]):
@@ -864,6 +869,7 @@ def handle_add(
                     break
             if not wrote:
                 fail(f"Slot {label} filled before write; please retry.")
+
 
         target_title = ws0.title
 
