@@ -8,6 +8,7 @@ import streamlit as st
 from .utils import fmt_time
 from .locks import get_or_create_locks_sheet, acquire_fcfs_lock, lock_key
 from .schedule_query import (
+    _TIME_CELL_RE,
     _read_grid,
     _RANGE_RE,
     _parse_time_cell,
